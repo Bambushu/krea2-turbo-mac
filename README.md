@@ -41,9 +41,18 @@ while you work. 100% ComfyUI core nodes, no custom nodes.
   - `text_encoders/qwen3vl_4b_bf16.safetensors`
   - `vae/qwen_image_vae.safetensors`
 
-**bf16 is not a choice, it's the only thing that runs.** The fp8 weights die on MPS
-(`Float8_e4m3fn` is unsupported), and the ComfyUI-GGUF node predates the Krea 2 architecture.
-Don't spend time "optimizing" — bf16 or nothing.
+**bf16 is not a choice, it's the only thing that runs.** We tested every smaller checkpoint
+in the repo on MPS (ComfyUI current as of July 2026):
+
+| Checkpoint | Size | On Mac |
+|---|---|---|
+| `krea2_turbo_bf16` | 26.3 GB | ✅ works — this repo |
+| `krea2_turbo_fp8_scaled` | 13.1 GB | ❌ `Float8_e4m3fn` unsupported on MPS |
+| `krea2_turbo_int8_convrot` | 13.5 GB | ❌ `UNETLoader` errors (`int8_tensorwise` unsupported; ConvRot kernels are CUDA-only) |
+| `krea2_turbo_mxfp8` / `nvfp4` | 13.5 / 7.7 GB | ❌ NVIDIA Blackwell formats |
+| GGUF quants | — | ❌ ComfyUI-GGUF predates the Krea 2 architecture (this is the future low-RAM path once supported) |
+
+Don't spend time "optimizing" — bf16 or nothing, for now.
 
 ## The locked recipe
 
