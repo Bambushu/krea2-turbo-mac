@@ -91,9 +91,12 @@ a CFG model:
 These are Apple-Silicon backend bugs, not Krea 2 bugs — most will bite you on any large
 DiT in ComfyUI on a Mac.
 
-1. **`batch_size` must be 1.** With batch > 1 on MPS, only the first latent is denoised —
-   you get one good frame plus pure static. Larger batches at 832×1216 also spiked past
-   48 GB and OOM-killed ComfyUI. Loop seeds one image per queue instead.
+1. **`batch_size` must be 1** — but queue as many jobs as you like. These are different
+   things: the `batch_size` widget (the batch dimension inside one render) is what breaks on
+   MPS — set it to 4 and only *one* of the four denoises; the rest come out as pure static
+   (tested: a batch of 4 gave three noise frames and one clean image). Large batches at full
+   res also spike past 48 GB and OOM ComfyUI. Submitting many *separate* prompts to the queue,
+   each at batch_size 1, is totally fine — that's how you render a sweep. Loop seeds, don't batch.
 2. **Never set a LoRA to strength 0.0 — bypass the node instead.** A `LoraLoaderModelOnly` at
    0.0 NaNs the model on MPS and renders pure black. A zeroed patch is *not* a no-op here. To
    turn a LoRA off, right-click → Bypass (or Ctrl+B), which excludes it from the graph cleanly.
