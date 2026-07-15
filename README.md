@@ -31,7 +31,10 @@ while you work. 100% ComfyUI core nodes, no custom nodes.
 
 ## Requirements
 
-- Apple Silicon Mac with **48 GB+ unified memory** (the bf16 UNet alone is ~26 GB)
+- Apple Silicon Mac with **48 GB+ unified memory** (validated). The three models total
+  ~35.5 GB (UNet 26.3 + TE 8.9 + VAE 0.25), so 36 GB is untested and will swap heavily at
+  best — ComfyUI can unload the TE between encode and sampling, which may make it survivable.
+  Reports welcome.
 - ComfyUI (recent build — needs the `krea2` CLIP type)
 - Models from [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2):
   - `diffusion_models/krea2_turbo_bf16.safetensors`
