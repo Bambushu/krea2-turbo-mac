@@ -1,0 +1,588 @@
+{
+ "last_node_id": 21,
+ "last_link_id": 11,
+ "nodes": [
+  {
+   "id": 20,
+   "type": "MarkdownNote",
+   "pos": [
+    -460,
+    80
+   ],
+   "size": [
+    460,
+    900
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "MarkdownNote"
+   },
+   "widgets_values": [
+    "## MODELS USED IN THIS WORKFLOW\n\n### Load Diffusion Model\n[\u2b07 Download krea2_turbo_bf16.safetensors \u00b7 26.3 GB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_bf16.safetensors)\n\n*Place in: ComfyUI/models/diffusion_models*\n\n### Load CLIP\n[\u2b07 Download qwen3vl_4b_bf16.safetensors \u00b7 8.9 GB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors)\n\n*Place in: ComfyUI/models/text_encoders*\n\n### Load VAE\n[\u2b07 Download qwen_image_vae.safetensors \u00b7 254 MB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors)\n\n*Place in: ComfyUI/models/vae*\n\n### Load LoRA (optional)\n[\u2b07 Download Realism Engine for Krea 2 \u00b7 civitai](https://civitai.com/models/3109006)\n\n*Place in: ComfyUI/models/loras \u2014 toggle the purple node with Ctrl+B*\n\n\u26a0\ufe0f After placing the files, restart ComfyUI or refresh model lists with the **R** shortcut.\n\n**Custom Nodes:** none \u2014 100% ComfyUI core nodes.\n\n**Requirements:** Apple Silicon Mac, 48 GB+ unified memory (bf16 only \u2014 fp8/GGUF do not run on MPS).\n"
+   ],
+   "title": "Models & downloads",
+   "color": "#432",
+   "bgcolor": "#653"
+  },
+  {
+   "id": 21,
+   "type": "MarkdownNote",
+   "pos": [
+    40,
+    80
+   ],
+   "size": [
+    420,
+    620
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "MarkdownNote"
+   },
+   "widgets_values": [
+    "## RECIPE & MAC GOTCHAS\n\n**Locked recipe:** 16 steps \u00b7 cfg 1.0 \u00b7 euler \u00b7 simple \u00b7 denoise 1.0\nNegative = ConditioningZeroOut of the positive \u2014 at cfg 1 negatives are **dead**, don't write them.\n\n**Speed dial:** default is 16 steps (finals quality). Drop to **8** for 2x-faster seed hunting \u2014 same seed keeps the composition, so re-render keepers at 16.\n\n**MPS rules:**\n- `batch_size` MUST stay **1** \u2014 batch > 1 = static/garbage frames + possible OOM kill\n- first render cold-loads ~26 GB, keep ComfyUI warm between renders\n\n**Prompting at cfg 1:** the positive prompt is the only steering. Short comma-phrases \u2014\n*framing, pose/action, expression, clothing, setting, lighting*. State the expression\nexplicitly every time or you get a neutral house-face.\n\n**Realism Engine (purple node):**\n- Toggle with **Ctrl+B** (bypass) \u2014 NEVER set strength 0.0 on MPS: a zeroed LoRA NaNs the model and renders pure black\n- Keep ~**0.5** on fresh faces and state ethnicity/age in the prompt \u2014 above 0.5 the LoRA drifts unpinned identity attributes\n"
+   ],
+   "title": "Recipe & Mac gotchas",
+   "color": "#432",
+   "bgcolor": "#653"
+  },
+  {
+   "id": 1,
+   "type": "UNETLoader",
+   "pos": [
+    520,
+    120
+   ],
+   "size": [
+    340,
+    82
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      1
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "UNETLoader"
+   },
+   "widgets_values": [
+    "krea2_turbo_bf16.safetensors",
+    "default"
+   ],
+   "title": "Krea 2 Turbo (bf16)",
+   "color": "#232",
+   "bgcolor": "#353"
+  },
+  {
+   "id": 2,
+   "type": "LoraLoaderModelOnly",
+   "pos": [
+    520,
+    260
+   ],
+   "size": [
+    340,
+    106
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      4
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoraLoaderModelOnly"
+   },
+   "widgets_values": [
+    "krea2_realism_engine.safetensors",
+    0.5
+   ],
+   "title": "Realism Engine 0.5 \u2014 Ctrl+B to toggle",
+   "color": "#323",
+   "bgcolor": "#535"
+  },
+  {
+   "id": 4,
+   "type": "CLIPLoader",
+   "pos": [
+    520,
+    430
+   ],
+   "size": [
+    340,
+    106
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "CLIP",
+     "type": "CLIP",
+     "links": [
+      3
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPLoader"
+   },
+   "widgets_values": [
+    "qwen3vl_4b_bf16.safetensors",
+    "krea2",
+    "default"
+   ],
+   "title": "Text encoder (type MUST be krea2)",
+   "color": "#232",
+   "bgcolor": "#353"
+  },
+  {
+   "id": 9,
+   "type": "VAELoader",
+   "pos": [
+    520,
+    590
+   ],
+   "size": [
+    340,
+    58
+   ],
+   "flags": {},
+   "order": 5,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "VAE",
+     "type": "VAE",
+     "links": [
+      10
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAELoader"
+   },
+   "widgets_values": [
+    "qwen_image_vae.safetensors"
+   ],
+   "title": "Qwen image VAE",
+   "color": "#232",
+   "bgcolor": "#353"
+  },
+  {
+   "id": 5,
+   "type": "CLIPTextEncode",
+   "pos": [
+    920,
+    120
+   ],
+   "size": [
+    400,
+    200
+   ],
+   "flags": {},
+   "order": 6,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "clip",
+     "type": "CLIP",
+     "link": 3
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONDITIONING",
+     "type": "CONDITIONING",
+     "links": [
+      5,
+      6
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "CLIPTextEncode"
+   },
+   "widgets_values": [
+    "a woman in her late 20s, candid photo, waist-up, sitting at a cafe window table, soft smile, oversized cream knit sweater, morning light through the window, shallow depth of field"
+   ],
+   "title": "Prompt (the ONLY steering at cfg 1)",
+   "color": "#223",
+   "bgcolor": "#335"
+  },
+  {
+   "id": 6,
+   "type": "ConditioningZeroOut",
+   "pos": [
+    920,
+    380
+   ],
+   "size": [
+    400,
+    58
+   ],
+   "flags": {},
+   "order": 7,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "conditioning",
+     "type": "CONDITIONING",
+     "link": 6
+    }
+   ],
+   "outputs": [
+    {
+     "name": "CONDITIONING",
+     "type": "CONDITIONING",
+     "links": [
+      7
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "ConditioningZeroOut"
+   },
+   "widgets_values": [],
+   "title": "Negative = zeroed positive (do not edit)",
+   "color": "#223",
+   "bgcolor": "#335"
+  },
+  {
+   "id": 7,
+   "type": "EmptySD3LatentImage",
+   "pos": [
+    920,
+    500
+   ],
+   "size": [
+    400,
+    106
+   ],
+   "flags": {},
+   "order": 8,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      8
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "EmptySD3LatentImage"
+   },
+   "widgets_values": [
+    832,
+    1216,
+    1
+   ],
+   "title": "Latent \u2014 batch_size stays 1 on Mac",
+   "color": "#432",
+   "bgcolor": "#653"
+  },
+  {
+   "id": 8,
+   "type": "KSampler",
+   "pos": [
+    1380,
+    120
+   ],
+   "size": [
+    380,
+    262
+   ],
+   "flags": {},
+   "order": 9,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 4
+    },
+    {
+     "name": "positive",
+     "type": "CONDITIONING",
+     "link": 5
+    },
+    {
+     "name": "negative",
+     "type": "CONDITIONING",
+     "link": 7
+    },
+    {
+     "name": "latent_image",
+     "type": "LATENT",
+     "link": 8
+    }
+   ],
+   "outputs": [
+    {
+     "name": "LATENT",
+     "type": "LATENT",
+     "links": [
+      9
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "KSampler"
+   },
+   "widgets_values": [
+    0,
+    "randomize",
+    16,
+    1.0,
+    "euler",
+    "simple",
+    1.0
+   ],
+   "title": "Sampler \u2014 16 steps \u00b7 cfg 1 \u00b7 euler/simple",
+   "color": "#432",
+   "bgcolor": "#653"
+  },
+  {
+   "id": 10,
+   "type": "VAEDecode",
+   "pos": [
+    1380,
+    440
+   ],
+   "size": [
+    380,
+    50
+   ],
+   "flags": {},
+   "order": 10,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "samples",
+     "type": "LATENT",
+     "link": 9
+    },
+    {
+     "name": "vae",
+     "type": "VAE",
+     "link": 10
+    }
+   ],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      11
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "VAEDecode"
+   },
+   "widgets_values": [],
+   "color": "#222",
+   "bgcolor": "#000"
+  },
+  {
+   "id": 11,
+   "type": "SaveImage",
+   "pos": [
+    1380,
+    550
+   ],
+   "size": [
+    380,
+    300
+   ],
+   "flags": {},
+   "order": 11,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "images",
+     "type": "IMAGE",
+     "link": 11
+    }
+   ],
+   "outputs": [],
+   "properties": {
+    "Node name for S&R": "SaveImage"
+   },
+   "widgets_values": [
+    "krea2"
+   ],
+   "color": "#222",
+   "bgcolor": "#000"
+  }
+ ],
+ "links": [
+  [
+   1,
+   1,
+   0,
+   2,
+   0,
+   "MODEL"
+  ],
+  [
+   3,
+   4,
+   0,
+   5,
+   0,
+   "CLIP"
+  ],
+  [
+   5,
+   5,
+   0,
+   8,
+   1,
+   "CONDITIONING"
+  ],
+  [
+   6,
+   5,
+   0,
+   6,
+   0,
+   "CONDITIONING"
+  ],
+  [
+   7,
+   6,
+   0,
+   8,
+   2,
+   "CONDITIONING"
+  ],
+  [
+   8,
+   7,
+   0,
+   8,
+   3,
+   "LATENT"
+  ],
+  [
+   9,
+   8,
+   0,
+   10,
+   0,
+   "LATENT"
+  ],
+  [
+   10,
+   9,
+   0,
+   10,
+   1,
+   "VAE"
+  ],
+  [
+   11,
+   10,
+   0,
+   11,
+   0,
+   "IMAGE"
+  ],
+  [
+   4,
+   2,
+   0,
+   8,
+   0,
+   "MODEL"
+  ]
+ ],
+ "groups": [
+  {
+   "id": 1,
+   "title": "Models",
+   "bounding": [
+    500,
+    40,
+    380,
+    630
+   ],
+   "color": "#3f5159",
+   "font_size": 24,
+   "flags": {}
+  },
+  {
+   "id": 2,
+   "title": "Prompt & latent",
+   "bounding": [
+    900,
+    40,
+    440,
+    590
+   ],
+   "color": "#3f5159",
+   "font_size": 24,
+   "flags": {}
+  },
+  {
+   "id": 3,
+   "title": "Sample & save",
+   "bounding": [
+    1360,
+    40,
+    420,
+    830
+   ],
+   "color": "#3f5159",
+   "font_size": 24,
+   "flags": {}
+  }
+ ],
+ "config": {},
+ "extra": {},
+ "version": 0.4
+}
