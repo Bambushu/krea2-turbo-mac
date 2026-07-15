@@ -9,9 +9,9 @@ you can ship to clients.
 
 ## Examples
 
-All rendered locally on an M-series Mac with the exact workflow in this repo — bf16, 26 steps, no upscaler, no post. Same seed per pair; left has the Realism Engine node bypassed, right has it on at 0.4.
+All rendered locally on an M-series Mac with the exact workflow in this repo — bf16, 26 steps, no upscaler, no post. Same seed per pair; left has the Realism Engine node bypassed (the shipped default), right has it enabled at 0.4.
 
-| Realism Engine off | Realism Engine 0.4 |
+| Realism Engine off (default) | Realism Engine 0.4 |
 |---|---|
 | ![cafe off](examples/demo_cafe_bare_832x1216.png) | ![cafe RE](examples/demo_cafe_realism-engine_832x1216.png) |
 | ![carpenter off](examples/demo_carpenter_bare_1024.png) | ![carpenter RE](examples/demo_carpenter_realism-engine_1024.png) |
@@ -20,9 +20,11 @@ All rendered locally on an M-series Mac with the exact workflow in this repo —
 
 ## The file
 
-One workflow — `Krea2-Turbo_Mac.json`. The core Turbo recipe (UNet → TE → 26-step sampler)
-plus a Realism Engine LoRA node you can flip off any time: **right-click the purple node →
-Bypass**, or select it and press **Ctrl+B**. (Never set its strength to 0 — see gotcha 2.)
+One workflow — `Krea2-Turbo_Mac.json`. The core Turbo recipe (UNet → TE → 26-step sampler),
+plus a Realism Engine LoRA node that **ships bypassed** so the base graph runs on just the three
+required models — nothing else to download before your first render. Turn the LoRA on for cleaner
+skin: select the purple node and press **Ctrl+B** (or right-click → Set Mode → Always); the same
+keys toggle it back off. (Never set its strength to 0 — see gotcha 2.)
 
 It ships with two in-graph info panels: a **model download panel** (direct HF links with sizes
 and install paths) and a **recipe/gotchas panel** — so you don't need this README open while
@@ -108,9 +110,9 @@ DiT in ComfyUI on a Mac.
 [Realism Engine for Krea 2](https://civitai.com/models/3109006) is a skin/texture LoRA that
 takes the edge off Turbo's distillation look. Load it with **`LoraLoaderModelOnly`** — the
 full `LoraLoader` also patches the text encoder, which re-interprets your prompt and shifts
-the whole image. The node ships at strength **0.4** — the sweet spot for clean skin without
-over-smoothing. To run without it, **right-click the node → Bypass** (or select it and press
-**Ctrl+B**) — never zero the strength (see gotcha 2).
+the whole image. The node ships **bypassed** at strength **0.4** — the sweet spot for clean skin
+without over-smoothing. Enable it with **Ctrl+B** (or right-click → Set Mode → Always) once the
+LoRA file is in place; the same keys switch it back off. Never zero the strength (see gotcha 2).
 
 **Identity drift warning:** at cfg 1 nothing anchors attributes you don't specify, and a LoRA
 pulls every unspecified attribute toward its own training data. We watched a subject's
