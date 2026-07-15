@@ -11,7 +11,7 @@
    ],
    "size": [
     460,
-    760
+    940
    ],
    "flags": {},
    "order": 0,
@@ -22,7 +22,7 @@
     "Node name for S&R": "MarkdownNote"
    },
    "widgets_values": [
-    "## MODELS USED IN THIS WORKFLOW\n\n### Load Diffusion Model\n[\u2b07 Download krea2_turbo_bf16.safetensors \u00b7 26.3 GB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_bf16.safetensors)\n\n*Place in: ComfyUI/models/diffusion_models*\n\n### Load CLIP\n[\u2b07 Download qwen3vl_4b_bf16.safetensors \u00b7 8.9 GB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors)\n\n*Place in: ComfyUI/models/text_encoders*\n\n### Load VAE\n[\u2b07 Download qwen_image_vae.safetensors \u00b7 254 MB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors)\n\n*Place in: ComfyUI/models/vae*\n\n\u26a0\ufe0f After placing the files, restart ComfyUI or refresh model lists with the **R** shortcut.\n\n**Custom Nodes:** none \u2014 100% ComfyUI core nodes.\n\n**Requirements:** Apple Silicon Mac, 48 GB unified memory (validated; 36 GB swaps heavily). bf16 only \u2014 fp8/GGUF do not run on MPS."
+    "## MODELS USED IN THIS WORKFLOW\n\n### Load Diffusion Model\n[\u2b07 Download krea2_turbo_bf16.safetensors \u00b7 26.3 GB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_bf16.safetensors)\n\n*Place in: ComfyUI/models/diffusion_models*\n\n### Load CLIP\n[\u2b07 Download qwen3vl_4b_bf16.safetensors \u00b7 8.9 GB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/text_encoders/qwen3vl_4b_bf16.safetensors)\n\n*Place in: ComfyUI/models/text_encoders*\n\n### Load VAE\n[\u2b07 Download qwen_image_vae.safetensors \u00b7 254 MB](https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors)\n\n*Place in: ComfyUI/models/vae*\n\n### Load LoRA (optional \u2014 the purple node)\n[\u2b07 Download Realism Engine for Krea 2 \u00b7 civitai](https://civitai.com/models/3109006)\n\n*Place in: ComfyUI/models/loras. Don't want it? Right-click the purple node \u2192 Bypass (or select it + Ctrl+B).*\n\n\u26a0\ufe0f After placing the files, restart ComfyUI or refresh model lists with the **R** shortcut.\n\n**Custom Nodes:** none \u2014 100% ComfyUI core nodes.\n\n**Requirements:** Apple Silicon Mac, 48 GB unified memory (validated; 36 GB swaps heavily). bf16 only \u2014 fp8/GGUF do not run on MPS."
    ],
    "title": "Models & downloads",
    "color": "#432",
@@ -37,7 +37,7 @@
    ],
    "size": [
     420,
-    500
+    660
    ],
    "flags": {},
    "order": 1,
@@ -48,7 +48,7 @@
     "Node name for S&R": "MarkdownNote"
    },
    "widgets_values": [
-    "## RECIPE & MAC GOTCHAS\n\n**Locked recipe:** 26 steps \u00b7 cfg 1.0 \u00b7 euler \u00b7 simple \u00b7 denoise 1.0\nNegative = ConditioningZeroOut of the positive \u2014 at cfg 1 negatives are **dead**, don't write them.\n\n**Steps:** 26 is the realism sweet spot (20-26 band; past 26 barely differs). Drop to 8-16 for\nfaster seed hunting, then finalize keepers at 26 \u2014 composition shifts a little across big step\nchanges, so re-check the final.\n\n**MPS rules:**\n- `batch_size` MUST stay **1** \u2014 batch > 1 = static/garbage frames + possible OOM kill\n- first render cold-loads ~26 GB, keep ComfyUI warm between renders\n\n**Prompting at cfg 1:** the positive prompt is the only steering. Lead with a photographic\nframing (`sharp high-detail realistic photograph, natural skin texture with fine pores` /\n`realistic candid iphone flash photo at night`) \u2014 NOT `amateur smartphone photo, unedited`,\nwhich actively softens. State the expression explicitly. Pin ethnicity/age or they drift when\nyou change any setting. `clear complexion, few freckles` cleans up freckle-heavy skin."
+    "## RECIPE & MAC GOTCHAS\n\n**Locked recipe:** 26 steps \u00b7 cfg 1.0 \u00b7 euler \u00b7 simple \u00b7 denoise 1.0\nNegative = ConditioningZeroOut of the positive \u2014 at cfg 1 negatives are **dead**, don't write them.\n\n**Steps:** 26 is the realism sweet spot (20-26 band; past 26 barely differs). Drop to 8-16 for\nfaster seed hunting, then finalize keepers at 26 \u2014 composition shifts a little across big step\nchanges, so re-check the final.\n\n**MPS rules:**\n- `batch_size` MUST stay **1** \u2014 batch > 1 = static/garbage frames + possible OOM kill\n- first render cold-loads ~26 GB, keep ComfyUI warm between renders\n\n**Prompting at cfg 1:** the positive prompt is the only steering. Lead with a photographic\nframing (`sharp high-detail realistic photograph, natural skin texture with fine pores` /\n`realistic candid iphone flash photo at night`) \u2014 NOT `amateur smartphone photo, unedited`,\nwhich actively softens. State the expression explicitly. Pin ethnicity/age or they drift when\nyou change any setting. `clear complexion, few freckles` cleans up freckle-heavy skin.\n\n**Realism Engine (purple node):**\n- **Toggle it off with the mouse: right-click the node \u2192 Bypass** (or select it and press\n  **Ctrl+B**). NEVER set strength to 0.0 on MPS \u2014 a zeroed LoRA NaNs the model and renders pure black.\n- **0.4** is the sweet spot for clean skin. It doesn't fix freckles alone (use the prompt term);\n  above ~0.5 it drifts unpinned identity attributes."
    ],
    "title": "Recipe & Mac gotchas",
    "color": "#432",
@@ -74,7 +74,7 @@
      "name": "MODEL",
      "type": "MODEL",
      "links": [
-      4
+      1
      ],
      "slot_index": 0
     }
@@ -91,6 +91,48 @@
    "bgcolor": "#353"
   },
   {
+   "id": 2,
+   "type": "LoraLoaderModelOnly",
+   "pos": [
+    520,
+    260
+   ],
+   "size": [
+    340,
+    106
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "model",
+     "type": "MODEL",
+     "link": 1
+    }
+   ],
+   "outputs": [
+    {
+     "name": "MODEL",
+     "type": "MODEL",
+     "links": [
+      4
+     ],
+     "slot_index": 0
+    }
+   ],
+   "properties": {
+    "Node name for S&R": "LoraLoaderModelOnly"
+   },
+   "widgets_values": [
+    "krea2_realism_engine.safetensors",
+    0.4
+   ],
+   "title": "Realism Engine 0.4 \u2014 right-click \u2192 Bypass to toggle off",
+   "color": "#323",
+   "bgcolor": "#535"
+  },
+  {
    "id": 4,
    "type": "CLIPLoader",
    "pos": [
@@ -102,7 +144,7 @@
     106
    ],
    "flags": {},
-   "order": 3,
+   "order": 4,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -139,7 +181,7 @@
     58
    ],
    "flags": {},
-   "order": 4,
+   "order": 5,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -174,7 +216,7 @@
     200
    ],
    "flags": {},
-   "order": 5,
+   "order": 6,
    "mode": 0,
    "inputs": [
     {
@@ -216,7 +258,7 @@
     58
    ],
    "flags": {},
-   "order": 6,
+   "order": 7,
    "mode": 0,
    "inputs": [
     {
@@ -255,7 +297,7 @@
     106
    ],
    "flags": {},
-   "order": 7,
+   "order": 8,
    "mode": 0,
    "inputs": [],
    "outputs": [
@@ -292,7 +334,7 @@
     262
    ],
    "flags": {},
-   "order": 8,
+   "order": 9,
    "mode": 0,
    "inputs": [
     {
@@ -354,7 +396,7 @@
     50
    ],
    "flags": {},
-   "order": 9,
+   "order": 10,
    "mode": 0,
    "inputs": [
     {
@@ -397,7 +439,7 @@
     300
    ],
    "flags": {},
-   "order": 10,
+   "order": 11,
    "mode": 0,
    "inputs": [
     {
@@ -418,6 +460,14 @@
   }
  ],
  "links": [
+  [
+   1,
+   1,
+   0,
+   2,
+   0,
+   "MODEL"
+  ],
   [
    3,
    4,
@@ -484,7 +534,7 @@
   ],
   [
    4,
-   1,
+   2,
    0,
    8,
    0,

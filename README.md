@@ -9,25 +9,24 @@ you can ship to clients.
 
 ## Examples
 
-All rendered locally on an M-series Mac with the exact workflows in this repo — bf16, 26 steps, no upscaler, no post. Same seed per pair; left is the bare workflow, right adds Realism Engine at 0.4.
+All rendered locally on an M-series Mac with the exact workflow in this repo — bf16, 26 steps, no upscaler, no post. Same seed per pair; left has the Realism Engine node bypassed, right has it on at 0.4.
 
-| Bare | + Realism Engine 0.4 |
+| Realism Engine off | Realism Engine 0.4 |
 |---|---|
-| ![cafe bare](examples/demo_cafe_bare_832x1216.png) | ![cafe RE](examples/demo_cafe_realism-engine_832x1216.png) |
-| ![carpenter bare](examples/demo_carpenter_bare_1024.png) | ![carpenter RE](examples/demo_carpenter_realism-engine_1024.png) |
-| ![street bare](examples/demo_street_bare_896x1152.png) | ![street RE](examples/demo_street_realism-engine_896x1152.png) |
-| ![lake bare](examples/demo_lake_bare_1216x832.png) | ![lake RE](examples/demo_lake_realism-engine_1216x832.png) |
+| ![cafe off](examples/demo_cafe_bare_832x1216.png) | ![cafe RE](examples/demo_cafe_realism-engine_832x1216.png) |
+| ![carpenter off](examples/demo_carpenter_bare_1024.png) | ![carpenter RE](examples/demo_carpenter_realism-engine_1024.png) |
+| ![street off](examples/demo_street_bare_896x1152.png) | ![street RE](examples/demo_street_realism-engine_896x1152.png) |
+| ![lake off](examples/demo_lake_bare_1216x832.png) | ![lake RE](examples/demo_lake_realism-engine_1216x832.png) |
 
-## Files
+## The file
 
-| File | What |
-|---|---|
-| `Krea2-Turbo_Mac.json` | Bare Turbo workflow — UNet → TE → 26-step sampler |
-| `Krea2-Turbo-LoRA_Mac.json` | Same + a toggleable Realism Engine LoRA slot (Ctrl+B to bypass) |
+One workflow — `Krea2-Turbo_Mac.json`. The core Turbo recipe (UNet → TE → 26-step sampler)
+plus a Realism Engine LoRA node you can flip off any time: **right-click the purple node →
+Bypass**, or select it and press **Ctrl+B**. (Never set its strength to 0 — see gotcha 2.)
 
-Both ship with two in-graph info panels: a **model download panel** (direct HF links with
-sizes and install paths) and a **recipe/gotchas panel** — you don't need this README open
-while you work. 100% ComfyUI core nodes, no custom nodes.
+It ships with two in-graph info panels: a **model download panel** (direct HF links with sizes
+and install paths) and a **recipe/gotchas panel** — so you don't need this README open while
+you work. 100% ComfyUI core nodes, no custom nodes.
 
 ## Requirements
 
@@ -93,8 +92,9 @@ DiT in ComfyUI on a Mac.
 1. **`batch_size` must be 1.** With batch > 1 on MPS, only the first latent is denoised —
    you get one good frame plus pure static. Larger batches at 832×1216 also spiked past
    48 GB and OOM-killed ComfyUI. Loop seeds one image per queue instead.
-2. **Never set a LoRA to strength 0.0 — delete the node.** A `LoraLoaderModelOnly` at 0.0
-   NaNs the model on MPS and renders pure black. A zeroed patch is *not* a no-op here.
+2. **Never set a LoRA to strength 0.0 — bypass the node instead.** A `LoraLoaderModelOnly` at
+   0.0 NaNs the model on MPS and renders pure black. A zeroed patch is *not* a no-op here. To
+   turn a LoRA off, right-click → Bypass (or Ctrl+B), which excludes it from the graph cleanly.
 3. **First render is slow, then fine.** Cold-loading ~26 GB takes minutes; keep ComfyUI
    warm between renders. Run *without* `--disable-smart-memory` so the model stays resident
    across a seed hunt — but if the same instance must also load another large model, batch
@@ -108,9 +108,9 @@ DiT in ComfyUI on a Mac.
 [Realism Engine for Krea 2](https://civitai.com/models/3109006) is a skin/texture LoRA that
 takes the edge off Turbo's distillation look. Load it with **`LoraLoaderModelOnly`** — the
 full `LoraLoader` also patches the text encoder, which re-interprets your prompt and shifts
-the whole image. The LoRA workflow ships with strength **0.4** — the sweet spot for clean skin
-without over-smoothing. To run without it, **toggle the node off with Ctrl+B (bypass) or delete
-it** — never zero the strength (see gotcha 2).
+the whole image. The node ships at strength **0.4** — the sweet spot for clean skin without
+over-smoothing. To run without it, **right-click the node → Bypass** (or select it and press
+**Ctrl+B**) — never zero the strength (see gotcha 2).
 
 **Identity drift warning:** at cfg 1 nothing anchors attributes you don't specify, and a LoRA
 pulls every unspecified attribute toward its own training data. We watched a subject's
