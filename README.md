@@ -32,29 +32,44 @@ you work. 100% ComfyUI core nodes, no custom nodes.
 
 ## Requirements
 
-- Apple Silicon Mac with **48 GB unified memory** (validated). The three models total ~35.5 GB
-  (UNet 26.3 + TE 8.9 + VAE 0.25), but they don't all sit resident at once: ComfyUI loads the
-  TE, encodes, unloads it, *then* loads the UNet to sample — so **peak is ~26 GB (UNet) + working
-  set**, not 35.5. In practice 36 GB runs but swaps hard (we watched a render pin swap at 21/22 GB);
-  48 GB is comfortable, ≤32 GB isn't realistic on the bf16 path. Reports welcome.
+- Apple Silicon Mac. **bf16 wants ~48 GB** unified memory: the three models total ~35.5 GB, but
+  they don't all sit resident at once (ComfyUI loads the TE, encodes, unloads it, *then* loads the
+  UNet), so **peak is ~26 GB + working set**. 36 GB runs but swaps hard; ≤32 GB isn't realistic on
+  bf16. **On less RAM, use the fp8 path** (below) — it drops the UNet to ~13 GB and brings 24-32 GB
+  Macs into range.
 - ComfyUI (recent build — needs the `krea2` CLIP type)
 - Models from [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2):
   - `diffusion_models/krea2_turbo_bf16.safetensors`
   - `text_encoders/qwen3vl_4b_bf16.safetensors`
   - `vae/qwen_image_vae.safetensors`
 
-**bf16 is not a choice, it's the only thing that runs.** We tested every smaller checkpoint
-in the repo on MPS (ComfyUI current as of July 2026):
+**bf16 is the zero-dependency default — but fp8 now runs too.** MPS couldn't touch fp8 for a
+long time (the `Float8_e4m3fn` wall), which is why bf16 used to be the only option. That changed:
+the community node **[ComfyUI-AppleSilicon-FP8](https://github.com/pawel-mazurkiewicz/ComfyUI-AppleSilicon-FP8)**
+(by pawel-mazurkiewicz) patches PyTorch's MPS backend at startup with a lookup-table fp8→float
+decode, and with it the fp8 checkpoint renders cleanly on Apple Silicon.
 
 | Checkpoint | Size | On Mac |
 |---|---|---|
-| `krea2_turbo_bf16` | 26.3 GB | ✅ works — this repo |
-| `krea2_turbo_fp8_scaled` | 13.1 GB | ❌ `Float8_e4m3fn` unsupported on MPS |
-| `krea2_turbo_int8_convrot` | 13.5 GB | ❌ `UNETLoader` errors (`int8_tensorwise` unsupported; ConvRot kernels are CUDA-only) |
+| `krea2_turbo_bf16` | 26.3 GB | ✅ default — zero extra deps, 100% core nodes |
+| `krea2_turbo_fp8_scaled` | 13.1 GB | ✅ works with torch 2.11 + the AppleSilicon-FP8 node (see below) |
+| `krea2_turbo_int8_convrot` | 13.5 GB | ❌ `int8_tensorwise` unsupported; ConvRot kernels are CUDA-only |
 | `krea2_turbo_mxfp8` / `nvfp4` | 13.5 / 7.7 GB | ❌ NVIDIA Blackwell formats |
-| GGUF quants | — | ❌ ComfyUI-GGUF predates the Krea 2 architecture (this is the future low-RAM path once supported) |
+| GGUF quants | — | ❌ ComfyUI-GGUF predates the Krea 2 architecture |
 
-Don't spend time "optimizing" — bf16 or nothing, for now.
+### Running fp8 (lower RAM: ~13 GB UNet)
+
+Reach for this if bf16's ~26 GB is too much for your Mac:
+
+1. **torch 2.11+** — the MPS fp8 support landed here.
+2. Install **[ComfyUI-AppleSilicon-FP8](https://github.com/pawel-mazurkiewicz/ComfyUI-AppleSilicon-FP8)** (ComfyUI Manager → search "AppleSilicon-FP8", or clone into `custom_nodes/` and `pip install -r requirements.txt`), then restart ComfyUI.
+3. Download `diffusion_models/krea2_turbo_fp8_scaled.safetensors` and point the UNETLoader at it. Nothing else in the workflow changes.
+
+It's a **memory win, not a speed win**: the default path decodes fp8→bf16 before the matmul, so
+render time is about the same as bf16 — you just fit in ~13 GB of UNet instead of ~26, which is
+what brings 24-32 GB Macs into range. Output looks the same as bf16. Credit to pawel-mazurkiewicz;
+the node is the whole reason this works. Note this path adds that one custom node, so the fp8 route
+isn't strictly "core nodes only" — the bf16 default still is.
 
 ## The locked recipe
 
@@ -63,15 +78,16 @@ Don't spend time "optimizing" — bf16 or nothing, for now.
 | UNet | `UNETLoader` → `krea2_turbo_bf16.safetensors`, dtype `default` |
 | Text encoder | `CLIPLoader` → `qwen3vl_4b_bf16.safetensors`, **type = `krea2`** |
 | VAE | `qwen_image_vae.safetensors` (a Flux VAE decodes to scrambled noise) |
-| Sampler | **26 steps · cfg 1.0 · euler · simple · denoise 1.0** |
+| Sampler | **20 steps · cfg 1.0 · euler · simple · denoise 1.0** |
 | Negative | `ConditioningZeroOut` of the positive — at cfg 1 negatives are dead, don't write them |
 | Latent | 1024×1024, 896×1152, 832×1216, or 1216×832 |
 
-**Steps — the single biggest realism lever.** Turbo *runs* at 8, but 8 reads soft and
-plasticky. A step sweep put the sweet spot at **20–26** (26 is the default here); past 26
-barely differs, so it's not worth the time. Drop to **8–16 for fast seed hunting**, then
-re-render keepers at 26 — composition shifts a little across a big step change, so judge the
-final, not the 8-step preview.
+**Steps — the biggest realism lever.** Turbo *runs* at 8, but 8 reads soft and plasticky.
+Detail climbs fast and then plateaus: **20 is the default here**, and on a tight portrait it's
+nearly indistinguishable from 26. Bump to **26 for maximum detail** on the hardest close-ups;
+drop to **8–12 for fast seed hunting**, then re-render keepers at 20. (The example images were
+rendered at 26, the max-detail setting.) Composition shifts a little across a big step change,
+so judge the final, not the 8-step preview.
 
 At cfg 1 the positive prompt is the *only* steering, so how you phrase it matters more than on
 a CFG model:
