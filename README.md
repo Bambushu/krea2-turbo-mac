@@ -9,7 +9,7 @@ you can ship to clients.
 
 ## Examples
 
-All rendered locally on an M-series Mac with the exact workflow in this repo — bf16, 26 steps, no upscaler, no post. Same seed per pair; left has the Realism Engine node bypassed (the shipped default), right has it enabled at 0.4.
+All rendered locally on an M-series Mac with the exact workflow in this repo — bf16, **8 steps** (the shipped default), no upscaler, no post. Same seed per pair; left has the Realism Engine node bypassed (the shipped default), right has it enabled at 0.4.
 
 | Realism Engine off (default) | Realism Engine 0.4 |
 |---|---|
@@ -20,7 +20,7 @@ All rendered locally on an M-series Mac with the exact workflow in this repo —
 
 ## The file
 
-One workflow — `Krea2-Turbo_Mac.json`. The core Turbo recipe (UNet → TE → 26-step sampler),
+One workflow — `Krea2-Turbo_Mac.json`. The core Turbo recipe (UNet → TE → 8-step sampler),
 plus a Realism Engine LoRA node that **ships bypassed** so the base graph runs on just the three
 required models — nothing else to download before your first render. Turn the LoRA on for cleaner
 skin: select the purple node and press **Ctrl+B** (or right-click → Set Mode → Always); the same
@@ -78,16 +78,21 @@ isn't strictly "core nodes only" — the bf16 default still is.
 | UNet | `UNETLoader` → `krea2_turbo_bf16.safetensors`, dtype `default` |
 | Text encoder | `CLIPLoader` → `qwen3vl_4b_bf16.safetensors`, **type = `krea2`** |
 | VAE | `qwen_image_vae.safetensors` (a Flux VAE decodes to scrambled noise) |
-| Sampler | **20 steps · cfg 1.0 · euler · simple · denoise 1.0** |
+| Sampler | **8 steps · cfg 1.0 · euler · simple · denoise 1.0** (Krea's official distilled schedule) |
 | Negative | `ConditioningZeroOut` of the positive — at cfg 1 negatives are dead, don't write them |
 | Latent | 1024×1024, 896×1152, 832×1216, or 1216×832 |
 
-**Steps — the biggest realism lever.** Turbo *runs* at 8, but 8 reads soft and plasticky.
-Detail climbs fast and then plateaus: **20 is the default here**, and on a tight portrait it's
-nearly indistinguishable from 26. Bump to **26 for maximum detail** on the hardest close-ups;
-drop to **8–12 for fast seed hunting**, then re-render keepers at 20. (The example images were
-rendered at 26, the max-detail setting.) Composition shifts a little across a big step change,
-so judge the final, not the 8-step preview.
+**Steps — a detail dial, not a quality requirement.** 8 steps is Turbo's design point and the
+workflow default; it holds up even well past the training resolution. Steps above 8 resolve
+extra micro-texture (skin pores, fabric weave) at proportional render time — **12–26 can be
+worth it on the hardest close-up portraits**, and barely matters elsewhere. Same seed keeps
+the composition across step changes, so hunt at 8 and re-render a keeper higher only if it
+needs it. (The example images are straight 8-step renders.)
+
+**Trap — do NOT set the timestep shift manually.** Krea's model card lists `Timestep Shift
+(μ): 1.15`, but ComfyUI already applies it inside the `krea2` loader. Adding a
+`ModelSamplingSD3` node "per the card" double-shifts the schedule and renders pure colorful
+static — at any resolution.
 
 At cfg 1 the positive prompt is the *only* steering, so how you phrase it matters more than on
 a CFG model:
