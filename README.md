@@ -1,8 +1,10 @@
-# Krea 2 Turbo on Apple Silicon (ComfyUI / MPS)
+# Krea 2 Turbo on Apple Silicon (ComfyUI / MPS) (16GB+ RAM, M1+)
 
 Run [Krea 2](https://huggingface.co/Comfy-Org/Krea-2) — the open-weights 12B DiT from Krea AI —
 **fully locally on a Mac**. This repo is the working recipe plus every MPS-specific failure
 mode we hit getting there, so you don't burn the hours we did.
+
+Tested on an M5 Pro 48 GB (bf16) and an M1 MacBook Air 16 GB (Q4 GGUF, see [16 GB Macs](#16-gb-macs-gguf)).
 
 Krea 2 is commercially licensed, which makes it one of the few open t2i models whose output
 you can ship to clients.
@@ -18,9 +20,11 @@ All rendered locally on an M-series Mac with the exact workflow in this repo —
 | ![street off](examples/demo_street_bare_896x1152.png) | ![street RE](examples/demo_street_realism-engine_896x1152.png) |
 | ![lake off](examples/demo_lake_bare_1216x832.png) | ![lake RE](examples/demo_lake_realism-engine_1216x832.png) |
 
-## The file
+## The files
 
-One workflow — `Krea2-Turbo_Mac.json`. The core Turbo recipe (UNet → TE → 8-step sampler),
+`Krea2-Turbo_Mac_16GB.json` is the small-Mac version: see [16 GB Macs](#16-gb-macs-gguf).
+
+The main workflow is `Krea2-Turbo_Mac.json`. The core Turbo recipe (UNet → TE → 8-step sampler),
 plus a Realism Engine LoRA node that **ships bypassed** so the base graph runs on just the three
 required models — nothing else to download before your first render. Turn the LoRA on for cleaner
 skin: select the purple node and press **Ctrl+B** (or right-click → Set Mode → Always); the same
@@ -36,7 +40,7 @@ you work. 100% ComfyUI core nodes, no custom nodes.
   they don't all sit resident at once (ComfyUI loads the TE, encodes, unloads it, *then* loads the
   UNet), so **peak is ~26 GB + working set**. 36 GB runs but swaps hard; ≤32 GB isn't realistic on
   bf16. **On less RAM, use the fp8 path** (below) — it drops the UNet to ~13 GB and brings 24-32 GB
-  Macs into range.
+  Macs into range. **On 16 GB, use the GGUF workflow** (see [16 GB Macs](#16-gb-macs-gguf)).
 - ComfyUI (recent build — needs the `krea2` CLIP type)
 - Models from [Comfy-Org/Krea-2](https://huggingface.co/Comfy-Org/Krea-2):
   - `diffusion_models/krea2_turbo_bf16.safetensors`
@@ -55,7 +59,7 @@ decode, and with it the fp8 checkpoint renders cleanly on Apple Silicon.
 | `krea2_turbo_fp8_scaled` | 13.1 GB | ✅ works with torch 2.11 + the AppleSilicon-FP8 node (see below) |
 | `krea2_turbo_int8_convrot` | 13.5 GB | ❌ `int8_tensorwise` unsupported; ConvRot kernels are CUDA-only |
 | `krea2_turbo_mxfp8` / `nvfp4` | 13.5 / 7.7 GB | ❌ NVIDIA Blackwell formats |
-| GGUF quants | — | ❌ ComfyUI-GGUF predates the Krea 2 architecture |
+| GGUF quants ([vantagewithai](https://huggingface.co/vantagewithai/Krea-2-Turbo-GGUF)) | 4.9-13.7 GB | ✅ with current ComfyUI-GGUF; Q4_K_M (7.5 GB) tested on a 16 GB M1 |
 
 ### Running fp8 (lower RAM: ~13 GB UNet)
 
@@ -70,6 +74,39 @@ render time is about the same as bf16 — you just fit in ~13 GB of UNet instead
 what brings 24-32 GB Macs into range. Output looks the same as bf16. Credit to pawel-mazurkiewicz;
 the node is the whole reason this works. Note this path adds that one custom node, so the fp8 route
 isn't strictly "core nodes only" — the bf16 default still is.
+
+## 16 GB Macs (GGUF)
+
+`Krea2-Turbo_Mac_16GB.json` runs Krea 2 Turbo on an M1 MacBook Air 16 GB. Same recipe, smaller
+files, one custom node:
+
+- `diffusion_models/krea2_turbo-Q4_K_M.gguf` (7.5 GB) from [vantagewithai/Krea-2-Turbo-GGUF](https://huggingface.co/vantagewithai/Krea-2-Turbo-GGUF)
+- `text_encoders/qwen3vl_4b_fp8_scaled.safetensors` (5.0 GB) from [Comfy-Org/Qwen3-VL](https://huggingface.co/Comfy-Org/Qwen3-VL/tree/main/text_encoders)
+- `vae/qwen_image_vae.safetensors` (254 MB), the same VAE as above
+- Custom node: [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) (city96), for the Unet Loader (GGUF). The fp8 text encoder loads in core ComfyUI, no fp8 node needed.
+
+The four examples above, re-rendered on the M1 with the same prompt and seed (8 steps, nothing
+else running):
+
+| Example | Time | Peak memory (whole system) | Max swap |
+|---|---|---|---|
+| cafe 832x1216 | 22m52s | 14.6 GB | 3.9 GB |
+| carpenter 1024x1024 | 25m42s | 14.7 GB | 4.0 GB |
+| street 896x1152 | 23m37s | 14.6 GB | 3.6 GB |
+| lake 1216x832 | 27m38s | 14.5 GB | 4.7 GB |
+| (768x768, 21 Oct) | 12m16s | 14.4 GB | 3.3 GB |
+
+| M5 Pro 48 GB, bf16 | M1 16 GB, Q4_K_M |
+|---|---|
+| ![cafe bf16](examples/demo_cafe_bare_832x1216.png) | ![cafe q4](examples/m1_cafe_q4_832x1216.jpg) |
+| ![carpenter bf16](examples/demo_carpenter_bare_1024.png) | ![carpenter q4](examples/m1_carpenter_q4_1024x1024.jpg) |
+| ![street bf16](examples/demo_street_bare_896x1152.png) | ![street q4](examples/m1_street_q4_896x1152.jpg) |
+| ![lake bf16](examples/demo_lake_bare_1216x832.png) | ![lake q4](examples/m1_lake_q4_1216x832.jpg) |
+
+Same scene and subject every time; Q4 moves smaller details around (a hand, a cup, the peaks).
+It swaps a few GB on 16 GB but never ran out of memory. Close browsers and other heavy apps first.
+The Realism Engine LoRA is left out of the 16 GB workflow: not tested with GGUF on 16 GB yet.
+More RAM? Q5_K_M (8.9 GB) or Q6_K (10.6 GB) from the same repo use the same loader (not tested here).
 
 ## The locked recipe
 
